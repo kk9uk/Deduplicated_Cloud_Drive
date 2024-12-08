@@ -11,6 +11,6 @@ Delete:
 2. delete index if ref_count == 0
 3. clean container if container_ref_count == 0
 
-Recipe: ConcurrentHashMap<path, UnmodifiableList<(hash, id, offset)>>
-'-> Index: ConcurrentHashMap<hash, (id, offset, ref_count)>
+Recipe: ConcurrentHashMap<path, UnmodifiableList<(hash, id, offset, size)>>
+'-> Index: ConcurrentHashMap<hash, (id, offset, size, ref_count)>
     '-> Container_Ref_Count: ConcurrentHashMap<id, container_ref_count>

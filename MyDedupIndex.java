@@ -29,12 +29,14 @@ public class MyDedupIndex implements Serializable {
         public String hash;
         public int id;
         public int offset;
+        public int size;
     }
 
     public static class IndexValue implements Serializable {
         @Serial private static final long serialVersionUID = 1155175977;
         public int id;
         public int offset;
+        public int size;
         public long refCount;
     }
 
