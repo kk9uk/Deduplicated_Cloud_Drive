@@ -9,6 +9,7 @@ public class MyDedupIndex implements Serializable {
     public Stat stat = new Stat();
     public ConcurrentHashMap<String, List<RecipeContent>> recipe = new ConcurrentHashMap<>();
     public ConcurrentHashMap<String, IndexValue> index = new ConcurrentHashMap<>();
+    public int nextContainerId = 1;
     public ConcurrentHashMap<Integer, Long> containerRefCount = new ConcurrentHashMap<>();
 
     public static class Stat implements Serializable {
