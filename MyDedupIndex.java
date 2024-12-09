@@ -1,11 +1,10 @@
-import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MyDedupIndex implements Serializable {
 
-    @Serial private static final long serialVersionUID = 4180;
+    private static final long serialVersionUID = 4180;
     public Stat stat = new Stat();
     public ConcurrentHashMap<String, List<RecipeContent>> recipe = new ConcurrentHashMap<>();
     public ConcurrentHashMap<String, IndexValue> index = new ConcurrentHashMap<>();
@@ -13,7 +12,7 @@ public class MyDedupIndex implements Serializable {
     public ConcurrentHashMap<Integer, Long> containerRefCount = new ConcurrentHashMap<>();
 
     public static class Stat implements Serializable {
-        @Serial private static final long serialVersionUID = 1155177381;
+        private static final long serialVersionUID = 1155177381;
         public byte noOfFilesStored;
         public long noOfPreDedupChunks;
         public long noOfUniqueChunks;
@@ -26,7 +25,7 @@ public class MyDedupIndex implements Serializable {
     }
 
     public static class RecipeContent implements Serializable {
-        @Serial private static final long serialVersionUID = 1155174948;
+        private static final long serialVersionUID = 1155174948;
         public String hash;
         public int id;
         public int offset;
@@ -34,7 +33,7 @@ public class MyDedupIndex implements Serializable {
     }
 
     public static class IndexValue implements Serializable {
-        @Serial private static final long serialVersionUID = 1155175977;
+        private static final long serialVersionUID = 1155175977;
         public int id;
         public int offset;
         public int size;
