@@ -1,4 +1,5 @@
 import java.io.*;
+import java.util.*;
 
 public class MyDedup {
 
@@ -111,13 +112,69 @@ public class MyDedup {
                         System.exit(1);
                     }
 
-                    // 2. find recipe & remove + TODO: stat modify
+                    // 2. find & remove recipe + stat modify
+                    String filePath = args[1];
+
+                    try {
+                        List<MyDedupIndex.RecipeContent> fileRecipe = myDedupIndex.recipe.get(filePath); // Retrieve
+                        
+                        myDedupIndex.recipe.remove(filePath); // Remove
+                        // Stat Modify
+                        myDedupIndex.stat.noOfFilesStored--;
+
+                        // 3. get chunk ref count -1 & check ref count == 0 -> delete index
+                        for (MyDedupIndex.RecipeContent chunk : fileRecipe) {
+                            String chunkHash = chunk.hash;
+
+                            MyDedupIndex.IndexValue chunkIndex = myDedupIndex.index.get(chunkHash); // Get index entry
+
+                            if (chunkIndex != null) {
+                                chunkIndex.refCount--; // Chunk refCount -1
+
+                                if (chunkIndex.refCount == 0) {
+                                    myDedupIndex.index.remove(chunkHash); // Remove chunk with no ref
+
+                                    // TODO: Stat Modify
 
 
-                    // 3. check chunk index ref count == 0 -> delete index
+                                    // 4. update container ref count & check ref count == 0 -> delete physically
+                                    int containerId = chunkIndex.id;
+                                    myDedupIndex.containerRefCount.put(containerId, myDedupIndex.containerRefCount.get(containerId) - 1); // Container refCount -1
+
+                                    // Remove container if refCount == 0
+                                    if (myDedupIndex.containerRefCount.get(containerId) == 0) {
+                                        myDedupIndex.containerRefCount.remove(containerId);
+                                        // Stat Modify
+                                        myDedupIndex.stat.noOfContainers--;
+
+                                        // TODO: Delete container physically
+
+                                    }
 
 
-                    // 4. check
+                                }
+                            }
+
+                            // TODO: Stat Modify (PreDedupChunks and Bytes)
+
+
+                        }
+
+                        // 5. Update index file
+                        try (FileOutputStream fileOutIndex = new FileOutputStream("./mydedup.index");
+                            ObjectOutputStream objectOutIndex = new ObjectOutputStream(fileOutIndex)){
+                            objectOutIndex.writeObject(myDedupIndex);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            System.out.println("[ERROR]: Failed to update index!");
+                            System.exit(1);
+                        }
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        System.out.println("[ERROR]: Failed to delete file " + filePath + "!");
+                        System.exit(1);
+                    }
 
                     break;
 
