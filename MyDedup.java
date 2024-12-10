@@ -2,30 +2,6 @@ import java.io.*;
 
 public class MyDedup {
 
-    private static double logN(double a, double base) {
-        return Math.log(a) / Math.log(base);
-    }
-
-    private static boolean isInteger(double a) {
-        return !Double.isNaN(a) && !Double.isInfinite(a) && (int) a == a;
-    }
-
-    private static MyDedupIndex loadMetadata() throws IOException, ClassNotFoundException {
-        if (!new File("./mydedup.index").exists()) {
-            return new MyDedupIndex();
-        }
-
-        try (FileInputStream fileInputStream = new FileInputStream("./mydedup.index"); ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
-            return (MyDedupIndex) objectInputStream.readObject();
-        }
-    }
-
-    private static void saveMetadata(MyDedupIndex myDedupIndex) throws IOException {
-        try (FileOutputStream fileOutputStream = new FileOutputStream("./mydedup.index"); ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
-            objectOutputStream.writeObject(myDedupIndex);
-        }
-    }
-
     public static void main(String[] args) {
         try {
 
@@ -49,6 +25,71 @@ public class MyDedup {
                     } else if (!isInteger(logN(Integer.parseInt(args[3]), 2))) {
                         System.out.println("[ERROR]: max_chunk has to be power of 2!");
                         System.exit(1);
+                    } else if (!new File(args[4]).exists()) {
+                        System.out.println("[ERROR]: " + args[4] + " does not exist!");
+                        System.exit(1);
+                    } else if (myDedupIndex.recipe.containsKey(args[4])) {
+                        System.out.println("[ERROR]: " + args[4] + " already uploaded!");
+                        System.exit(1);
+                    }
+
+                    int minChunk = Integer.parseInt(args[1]);
+                    int avgChunk = Integer.parseInt(args[2]);
+                    int maxChunk = Integer.parseInt(args[3]);
+                    byte[] file;
+                    try (FileInputStream fileInputStream = new FileInputStream(args[4])) {
+                        file = fileInputStream.readAllBytes();
+                    }
+
+                    // 2. chunk -> hash -> recipe (& buffer)
+                    boolean hasNextByte = true;
+                    int chunkStart = 0, chunkEnd;
+                    long prevRfp = 0;
+
+                    // precompute d^0..minChunk-1 mod avgChunk
+                    int[] dToPowIndexModQ = new int[minChunk];
+                    for (int i = 0; i < minChunk; ++i) {
+                        dToPowIndexModQ[i] = modularPow(257, i, avgChunk);
+                    }
+
+                    while (hasNextByte) {
+
+                        for (int noOfMisses = 0; ; ++noOfMisses) {
+
+                            // EOF
+                            if (chunkStart + minChunk >= file.length) {
+                                chunkEnd = file.length - 1;
+                                hasNextByte = false;
+                                break;
+                            }
+
+                            // max chunk
+                            if (minChunk + noOfMisses == maxChunk) {
+                                chunkEnd = chunkStart + maxChunk - 1;
+                                break;
+                            }
+
+                            long rfp = 0;
+                            // hacky modulo trick to prevent overflow
+                            if (noOfMisses == 0) {
+                                for (int i = 0; i < minChunk; ++i) {
+                                    rfp += ((file[chunkStart + noOfMisses + i] % avgChunk) * dToPowIndexModQ[minChunk - (i + 1)]) % avgChunk;
+                                }
+                                rfp %= avgChunk;
+                            } else {
+                                rfp = (((257 % avgChunk) * ((prevRfp % avgChunk - (dToPowIndexModQ[minChunk - 1] * (file[chunkStart + noOfMisses - 1] % avgChunk)) % avgChunk) % avgChunk)) % avgChunk + file[chunkStart + noOfMisses + minChunk - 1] % avgChunk) % avgChunk;
+                            }
+                            prevRfp = rfp;
+
+                            if ((rfp & (avgChunk - 1)) == 0) {
+                                chunkEnd = chunkStart + noOfMisses + minChunk - 1;
+                                break;
+                            }
+
+                        }
+
+                        chunkStart = chunkEnd + 1;
+
                     }
 
                     break;
@@ -78,6 +119,43 @@ public class MyDedup {
             e.printStackTrace();
             System.exit(1);
         }
+    }
+
+    private static double logN(double a, double base) {
+        return Math.log(a) / Math.log(base);
+    }
+
+    private static boolean isInteger(double a) {
+        return !Double.isNaN(a) && !Double.isInfinite(a) && (int) a == a;
+    }
+
+    private static MyDedupIndex loadMetadata() throws IOException, ClassNotFoundException {
+        if (!new File("./mydedup.index").exists()) {
+            return new MyDedupIndex();
+        }
+
+        try (FileInputStream fileInputStream = new FileInputStream("./mydedup.index"); ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
+            return (MyDedupIndex) objectInputStream.readObject();
+        }
+    }
+
+    private static void saveMetadata(MyDedupIndex myDedupIndex) throws IOException {
+        try (FileOutputStream fileOutputStream = new FileOutputStream("./mydedup.index"); ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
+            objectOutputStream.writeObject(myDedupIndex);
+        }
+    }
+
+    // b^2 mod m = (b * b) mod m = (b mod m * b mod m) mod m
+    private static int modularPow(int base, int exponent, int modulo) {
+        if (modulo == 1) {
+            return 0;
+        }
+
+        int result = 1;
+        for (int e = 0; e < exponent; ++e) {
+            result = (result * base) % modulo;
+        }
+        return result;
     }
 
 }
