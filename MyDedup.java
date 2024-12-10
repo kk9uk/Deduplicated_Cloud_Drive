@@ -102,7 +102,22 @@ public class MyDedup {
 
                 case "delete":
 
-                    System.out.println("deleted");
+                    // 1. read args
+                    if (args.length != 2) {
+                        System.out.println("[USAGE]: java MyDedup delete <pathname>");
+                        System.exit(1);
+                    } else if (!myDedupIndex.recipe.containsKey(args[1])) {
+                        System.out.println("[ERROR]: file " + args[1] + " does not exist!");
+                        System.exit(1);
+                    }
+
+                    // 2. find recipe & remove + TODO: stat modify
+
+
+                    // 3. check chunk index ref count == 0 -> delete index
+
+
+                    // 4. check
 
                     break;
 
