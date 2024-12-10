@@ -112,14 +112,14 @@ public class MyDedup {
                         System.exit(1);
                     }
 
-                    // 2. find & remove recipe + stat modify
+                    // 2. find & remove recipe
                     String filePath = args[1];
 
                     try {
                         List<MyDedupIndex.RecipeContent> fileRecipe = myDedupIndex.recipe.get(filePath); // Retrieve
                         
                         myDedupIndex.recipe.remove(filePath); // Remove
-                        // Stat Modify
+                        // Stat Modify (stored files no.)
                         myDedupIndex.stat.noOfFilesStored--;
 
                         // 3. get chunk ref count -1 & check ref count == 0 -> delete index
@@ -134,8 +134,9 @@ public class MyDedup {
                                 if (chunkIndex.refCount == 0) {
                                     myDedupIndex.index.remove(chunkHash); // Remove chunk with no ref
 
-                                    // TODO: Stat Modify
-
+                                    // Stat Modify (unique chunks and bytes)
+                                    myDedupIndex.stat.noOfUniqueChunks--;
+                                    myDedupIndex.stat.noOfBytesOfUniqueChunks -= chunkIndex.size;
 
                                     // 4. update container ref count & check ref count == 0 -> delete physically
                                     int containerId = chunkIndex.id;
@@ -144,19 +145,23 @@ public class MyDedup {
                                     // Remove container if refCount == 0
                                     if (myDedupIndex.containerRefCount.get(containerId) == 0) {
                                         myDedupIndex.containerRefCount.remove(containerId);
-                                        // Stat Modify
+                                        // Stat Modify (containers no.)
                                         myDedupIndex.stat.noOfContainers--;
 
-                                        // TODO: Delete container physically
-
+                                        // Delete container physically
+                                        String storagePath = "./data" + "/container_" + containerId; // TODO: not sure path
+                                        File containerFile = new File(storagePath);
+                                        if (containerFile.exists()) {
+                                            containerFile.delete();
+                                        } 
                                     }
-
-
                                 }
+                                
                             }
 
-                            // TODO: Stat Modify (PreDedupChunks and Bytes)
-
+                            // Stat Modify (PreDedupChunks and Bytes)
+                            myDedupIndex.stat.noOfPreDedupChunks--;
+                            myDedupIndex.stat.noOfBytesOfPreDedupChunks -= chunk.size;
 
                         }
 
