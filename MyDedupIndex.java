@@ -26,18 +26,32 @@ public class MyDedupIndex implements Serializable {
 
     public static class RecipeContent implements Serializable {
         private static final long serialVersionUID = 1155174948;
-        public String hash;
-        public int id;
-        public int offset;
-        public int size;
+        public final String hash;
+        public final int id;
+        public final int offset;
+        public final int size;
+
+        public RecipeContent(String hash, int id, int offset, int size) {
+            this.hash = hash;
+            this.id = id;
+            this.offset = offset;
+            this.size = size;
+        }
     }
 
     public static class IndexValue implements Serializable {
         private static final long serialVersionUID = 1155175977;
-        public int id;
-        public int offset;
-        public int size;
+        public final int id;
+        public final int offset;
+        public final int size;
         public long refCount;
+
+        public IndexValue(int id, int offset, int size, long refCount) {
+            this.id = id;
+            this.offset = offset;
+            this.size = size;
+            this.refCount = refCount;
+        }
     }
 
 }

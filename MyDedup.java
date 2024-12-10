@@ -1,5 +1,7 @@
 import java.io.*;
 import java.util.*;
+import java.math.BigInteger;
+import java.security.MessageDigest;
 
 public class MyDedup {
 
@@ -46,26 +48,30 @@ public class MyDedup {
                     boolean hasNextByte = true;
                     int chunkStart = 0, chunkEnd;
                     long prevRfp = 0;
-
                     // precompute d^0..minChunk-1 mod avgChunk
                     int[] dToPowIndexModQ = new int[minChunk];
                     for (int i = 0; i < minChunk; ++i) {
                         dToPowIndexModQ[i] = modularPow(257, i, avgChunk);
                     }
 
+                    MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+                    List<MyDedupIndex.RecipeContent> recipeContents = new ArrayList<>();
+                    ByteArrayOutputStream buffer = new ByteArrayOutputStream(1 * 1024 * 1024);
+
                     while (hasNextByte) {
 
+                        // chunk
                         for (int noOfMisses = 0; ; ++noOfMisses) {
 
                             // EOF
-                            if (chunkStart + minChunk >= file.length) {
+                            if (chunkStart + noOfMisses + minChunk - 1 >= file.length - 1) {
                                 chunkEnd = file.length - 1;
                                 hasNextByte = false;
                                 break;
                             }
 
                             // max chunk
-                            if (minChunk + noOfMisses == maxChunk) {
+                            if (minChunk + noOfMisses >= maxChunk) {
                                 chunkEnd = chunkStart + maxChunk - 1;
                                 break;
                             }
@@ -89,9 +95,62 @@ public class MyDedup {
 
                         }
 
+                        // hash
+                        byte[] chunk = Arrays.copyOfRange(file, chunkStart, chunkEnd + 1);
+                        String hash = new BigInteger(1, messageDigest.digest(chunk)).toString(16);
+                        messageDigest.reset();
+
+                        if (myDedupIndex.index.containsKey(hash)) {
+                            MyDedupIndex.IndexValue indexValue = myDedupIndex.index.get(hash);
+                            recipeContents.add(new MyDedupIndex.RecipeContent(
+                                    hash,
+                                    indexValue.id,
+                                    indexValue.offset,
+                                    indexValue.size
+                            ));
+                            ++indexValue.refCount;
+                        } else {
+
+                            if (buffer.size() + chunk.length > 1 * 1024 * 1024) {
+                                try (FileOutputStream fileOutputStream = new FileOutputStream("./data/" + myDedupIndex.nextContainerId)) {
+                                    buffer.writeTo(fileOutputStream);
+                                    buffer.reset();
+                                    ++myDedupIndex.nextContainerId;
+                                }
+                            }
+
+                            recipeContents.add(new MyDedupIndex.RecipeContent(
+                                    hash,
+                                    myDedupIndex.nextContainerId,
+                                    buffer.size(),
+                                    chunk.length
+                            ));
+                            myDedupIndex.index.put(
+                                    hash,
+                                    new MyDedupIndex.IndexValue(
+                                            myDedupIndex.nextContainerId,
+                                            buffer.size(),
+                                            chunk.length,
+                                            1
+                                    )
+                            );
+                            buffer.write(chunk);
+
+                        }
+
+                        if (!hasNextByte && buffer.size() != 0) {
+                            try (FileOutputStream fileOutputStream = new FileOutputStream("./data/" + myDedupIndex.nextContainerId)) {
+                                buffer.writeTo(fileOutputStream);
+                                buffer.reset();
+                                ++myDedupIndex.nextContainerId;
+                            }
+                        }
+
                         chunkStart = chunkEnd + 1;
 
                     }
+
+                    myDedupIndex.recipe.put(args[4], recipeContents);
 
                     break;
 
