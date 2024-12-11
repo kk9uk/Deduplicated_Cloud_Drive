@@ -57,6 +57,7 @@ public class MyDedup {
                     MessageDigest messageDigest = MessageDigest.getInstance("MD5");
                     List<MyDedupIndex.RecipeContent> recipeContents = new ArrayList<>();
                     ByteArrayOutputStream buffer = new ByteArrayOutputStream(1 * 1024 * 1024);
+                    long noOfChunksInBuffer = 0;
 
                     while (hasNextByte) {
 
@@ -115,7 +116,9 @@ public class MyDedup {
                                 try (FileOutputStream fileOutputStream = new FileOutputStream("./data/" + myDedupIndex.nextContainerId)) {
                                     buffer.writeTo(fileOutputStream);
                                     buffer.reset();
+                                    myDedupIndex.containerRefCount.put(myDedupIndex.nextContainerId, noOfChunksInBuffer);
                                     ++myDedupIndex.nextContainerId;
+                                    noOfChunksInBuffer = 0;
                                 }
                             }
 
@@ -135,6 +138,7 @@ public class MyDedup {
                                     )
                             );
                             buffer.write(chunk);
+                            ++noOfChunksInBuffer;
 
                         }
 
@@ -142,12 +146,12 @@ public class MyDedup {
                             try (FileOutputStream fileOutputStream = new FileOutputStream("./data/" + myDedupIndex.nextContainerId)) {
                                 buffer.writeTo(fileOutputStream);
                                 buffer.reset();
+                                myDedupIndex.containerRefCount.put(myDedupIndex.nextContainerId, noOfChunksInBuffer);
                                 ++myDedupIndex.nextContainerId;
+                                noOfChunksInBuffer = 0;
                             }
                         }
 
-                        // TODO:
-                        System.out.println(chunkStart + " " + chunkEnd);
                         chunkStart = chunkEnd + 1;
 
                     }
