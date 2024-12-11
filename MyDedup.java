@@ -156,6 +156,8 @@ public class MyDedup {
 
                 case "download":
 
+                    // 1. read args
+
                     if (args.length != 3) {
                         System.out.println("[USAGE]: java MyDedup download <file_to_download> <new_file_name>");
                         System.exit(1);
@@ -166,9 +168,13 @@ public class MyDedup {
                         System.exit(1);
                     }
                 
+                    // 2. read chunks
+
                     List<MyDedupIndex.RecipeContent> chunkList = myDedupIndex.recipe.get(args[1]);
                 
                     ByteArrayOutputStream data = new ByteArrayOutputStream();
+
+                    // 3. loop for read and write
                 
                     for (MyDedupIndex.RecipeContent currentChunk : chunkList) {
                         File containerFile = new File("data/" + currentChunk.id);
@@ -200,6 +206,8 @@ public class MyDedup {
                         System.out.println("[ERROR]: No data to write. Data size == 0.");
                         return;
                     }
+
+                    // 4. create local output file
                 
                     File fileOut = new File(args[2]);
                     if (fileOut.getParentFile() != null) {
