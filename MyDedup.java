@@ -80,11 +80,11 @@ public class MyDedup {
                             // hacky modulo trick to prevent overflow
                             if (noOfMisses == 0) {
                                 for (int i = 0; i < minChunk; ++i) {
-                                    rfp += ((file[chunkStart + noOfMisses + i] % avgChunk) * dToPowIndexModQ[minChunk - (i + 1)]) % avgChunk;
+                                    rfp += ((Byte.toUnsignedInt(file[chunkStart + noOfMisses + i]) % avgChunk) * dToPowIndexModQ[minChunk - (i + 1)]) % avgChunk;
                                 }
                                 rfp %= avgChunk;
                             } else {
-                                rfp = (((257 % avgChunk) * ((prevRfp % avgChunk - (dToPowIndexModQ[minChunk - 1] * (file[chunkStart + noOfMisses - 1] % avgChunk)) % avgChunk) % avgChunk)) % avgChunk + file[chunkStart + noOfMisses + minChunk - 1] % avgChunk) % avgChunk;
+                                rfp = (((257 % avgChunk) * ((prevRfp % avgChunk - (dToPowIndexModQ[minChunk - 1] * (Byte.toUnsignedInt(file[chunkStart + noOfMisses - 1]) % avgChunk)) % avgChunk) % avgChunk)) % avgChunk + Byte.toUnsignedInt(file[chunkStart + noOfMisses + minChunk - 1]) % avgChunk) % avgChunk;
                             }
                             prevRfp = rfp;
 
@@ -146,6 +146,8 @@ public class MyDedup {
                             }
                         }
 
+                        // TODO:
+                        System.out.println(chunkStart + " " + chunkEnd);
                         chunkStart = chunkEnd + 1;
 
                     }
