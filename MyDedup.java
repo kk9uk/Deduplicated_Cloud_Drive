@@ -156,7 +156,73 @@ public class MyDedup {
 
                 case "download":
 
-                    System.out.println("downloaded");
+                    if (args.length != 3) {
+                        System.out.println("[USAGE]: java MyDedup download <file_to_download> <new_file_name>");
+                        System.exit(1);
+                    }
+                
+                    if (!myDedupIndex.recipe.containsKey(args[1])) {
+                        System.out.println("[ERROR]: \"" + args[1] + "\" does not exist");
+                        System.exit(1);
+                    }
+                
+                    List<MyDedupIndex.RecipeContent> chunkList = myDedupIndex.recipe.get(args[1]);
+                
+                    ByteArrayOutputStream data = new ByteArrayOutputStream();
+                
+                    for (MyDedupIndex.RecipeContent currentChunk : chunkList) {
+                        File containerFile = new File("data/" + currentChunk.id);
+                        if (!containerFile.exists()) {
+                            System.out.println("[ERROR]: Missing container file: " + currentChunk.id);
+                            return;
+                        }
+                
+                        try (FileInputStream fileInputContainer = new FileInputStream(containerFile)) {
+                            fileInputContainer.skip(currentChunk.offset);
+                            byte[] containerData = new byte[currentChunk.size];
+                
+                            int bytesRead = 0;
+                            while (bytesRead < containerData.length) {
+                                int result = fileInputContainer.read(containerData, bytesRead, containerData.length - bytesRead);
+                                if (result == -1) break;
+                                bytesRead += result;
+                            }
+                
+                            data.write(containerData);
+                        } catch (IOException e) {
+                            System.err.println("[ERROR]: Failed to read chunk from container " + currentChunk.id);
+                            e.printStackTrace();
+                            return;
+                        }
+                    }
+                
+                    if (data.size() == 0) {
+                        System.out.println("[ERROR]: No data to write. Data size == 0.");
+                        return;
+                    }
+                
+                    File fileOut = new File(args[2]);
+                    if (fileOut.getParentFile() != null) {
+                        fileOut.getParentFile().mkdirs();
+                    }
+                    try {
+                        if (!fileOut.createNewFile()) {
+                            System.out.println("[ERROR]: Failed to create output file!");
+                            return;
+                        }
+                    } catch (IOException e) {
+                        System.err.println("[ERROR]: Could not create file " + args[2]);
+                        e.printStackTrace();
+                        return;
+                    }
+                
+                    try (FileOutputStream outputFile = new FileOutputStream(fileOut)) {
+                        data.writeTo(outputFile);
+                        System.out.println("Downloaded: " + args[2]);
+                    } catch (IOException e) {
+                        System.err.println("[ERROR]: Failed to write data to " + args[2]);
+                        e.printStackTrace();
+                    }
 
                     break;
 
