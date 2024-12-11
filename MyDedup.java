@@ -182,7 +182,7 @@ public class MyDedup {
                         File containerFile = new File("data/" + currentChunk.id);
                         if (!containerFile.exists()) {
                             System.out.println("[ERROR]: Missing container file: " + currentChunk.id);
-                            return;
+                            System.exit(1);
                         }
                 
                         try (FileInputStream fileInputContainer = new FileInputStream(containerFile)) {
@@ -200,13 +200,13 @@ public class MyDedup {
                         } catch (IOException e) {
                             System.err.println("[ERROR]: Failed to read chunk from container " + currentChunk.id);
                             e.printStackTrace();
-                            return;
+                            System.exit(1);
                         }
                     }
                 
                     if (data.size() == 0) {
                         System.out.println("[ERROR]: No data to write. Data size == 0.");
-                        return;
+                        System.exit(1);
                     }
 
                     // 4. create local output file
@@ -218,12 +218,12 @@ public class MyDedup {
                     try {
                         if (!fileOut.createNewFile()) {
                             System.out.println("[ERROR]: Failed to create output file!");
-                            return;
+                            System.exit(1);
                         }
                     } catch (IOException e) {
                         System.err.println("[ERROR]: Could not create file " + args[2]);
                         e.printStackTrace();
-                        return;
+                        System.exit(1);
                     }
                 
                     try (FileOutputStream outputFile = new FileOutputStream(fileOut)) {
@@ -284,7 +284,7 @@ public class MyDedup {
                                         myDedupIndex.stat.noOfContainers--;
 
                                         // Delete container physically
-                                        String storagePath = "./data" + "/container_" + containerId; // TODO: not sure path
+                                        String storagePath = "./data/" + containerId;
                                         File containerFile = new File(storagePath);
                                         if (containerFile.exists()) {
                                             containerFile.delete();
@@ -298,16 +298,6 @@ public class MyDedup {
                             myDedupIndex.stat.noOfPreDedupChunks--;
                             myDedupIndex.stat.noOfBytesOfPreDedupChunks -= chunk.size;
 
-                        }
-
-                        // 5. Update index file
-                        try (FileOutputStream fileOutIndex = new FileOutputStream("./mydedup.index");
-                            ObjectOutputStream objectOutIndex = new ObjectOutputStream(fileOutIndex)){
-                            objectOutIndex.writeObject(myDedupIndex);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            System.out.println("[ERROR]: Failed to update index!");
-                            System.exit(1);
                         }
 
                     } catch (Exception e) {
