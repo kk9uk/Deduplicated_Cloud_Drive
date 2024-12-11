@@ -95,12 +95,13 @@ public class MyDedup {
                             }
 
                         }
+                        byte[] chunk = Arrays.copyOfRange(file, chunkStart, chunkEnd + 1);
+                        ++myDedupIndex.stat.noOfPreDedupChunks;
+                        myDedupIndex.stat.noOfBytesOfPreDedupChunks += chunk.length;
 
                         // hash
-                        byte[] chunk = Arrays.copyOfRange(file, chunkStart, chunkEnd + 1);
                         String hash = new BigInteger(1, messageDigest.digest(chunk)).toString(16);
                         messageDigest.reset();
-
                         if (myDedupIndex.index.containsKey(hash)) {
                             MyDedupIndex.IndexValue indexValue = myDedupIndex.index.get(hash);
                             recipeContents.add(new MyDedupIndex.RecipeContent(
@@ -115,9 +116,10 @@ public class MyDedup {
                             if (buffer.size() + chunk.length > 1 * 1024 * 1024) {
                                 try (FileOutputStream fileOutputStream = new FileOutputStream("./data/" + myDedupIndex.nextContainerId)) {
                                     buffer.writeTo(fileOutputStream);
-                                    buffer.reset();
                                     myDedupIndex.containerRefCount.put(myDedupIndex.nextContainerId, noOfChunksInBuffer);
+                                    ++myDedupIndex.stat.noOfContainers;
                                     ++myDedupIndex.nextContainerId;
+                                    buffer.reset();
                                     noOfChunksInBuffer = 0;
                                 }
                             }
@@ -139,15 +141,18 @@ public class MyDedup {
                             );
                             buffer.write(chunk);
                             ++noOfChunksInBuffer;
+                            ++myDedupIndex.stat.noOfUniqueChunks;
+                            myDedupIndex.stat.noOfBytesOfUniqueChunks += chunk.length;
 
                         }
 
                         if (!hasNextByte && buffer.size() != 0) {
                             try (FileOutputStream fileOutputStream = new FileOutputStream("./data/" + myDedupIndex.nextContainerId)) {
                                 buffer.writeTo(fileOutputStream);
-                                buffer.reset();
                                 myDedupIndex.containerRefCount.put(myDedupIndex.nextContainerId, noOfChunksInBuffer);
+                                ++myDedupIndex.stat.noOfContainers;
                                 ++myDedupIndex.nextContainerId;
+                                buffer.reset();
                                 noOfChunksInBuffer = 0;
                             }
                         }
@@ -157,6 +162,9 @@ public class MyDedup {
                     }
 
                     myDedupIndex.recipe.put(args[4], recipeContents);
+                    ++myDedupIndex.stat.noOfFilesStored;
+
+                    reportStat(myDedupIndex);
 
                     break;
 
@@ -362,6 +370,18 @@ public class MyDedup {
             result = (result * base) % modulo;
         }
         return result;
+    }
+
+    private static void reportStat(MyDedupIndex myDedupIndex) {
+        System.out.println();
+        System.out.println("Report Output:");
+        System.out.println("Total number of files that have been stored: " + myDedupIndex.stat.noOfFilesStored);
+        System.out.println("Total number of pre-deduplicated chunks in storage: " + myDedupIndex.stat.noOfPreDedupChunks);
+        System.out.println("Total number of unique chunks in storage: " + myDedupIndex.stat.noOfUniqueChunks);
+        System.out.println("Total number of bytes of pre-deduplicated chunks in storage: " + myDedupIndex.stat.noOfBytesOfPreDedupChunks);
+        System.out.println("Total number of bytes of unique chunks in storage: " + myDedupIndex.stat.noOfBytesOfUniqueChunks);
+        System.out.println("Total number of containers in storage: " + myDedupIndex.stat.noOfContainers);
+        System.out.println("Deduplication ratio: " + myDedupIndex.stat.getDedupRatio());
     }
 
 }
