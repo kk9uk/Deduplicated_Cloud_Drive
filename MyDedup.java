@@ -39,9 +39,15 @@ public class MyDedup {
                     int minChunk = Integer.parseInt(args[1]);
                     int avgChunk = Integer.parseInt(args[2]);
                     int maxChunk = Integer.parseInt(args[3]);
-                    byte[] file;
+                    File _file = new File(args[4]);
+                    byte[] file = new byte[(int) _file.length()];
                     try (FileInputStream fileInputStream = new FileInputStream(args[4])) {
-                        file = fileInputStream.readAllBytes();
+                        int bytesRead = 0;
+                        while (bytesRead < file.length) {
+                            int result = fileInputStream.read(file, bytesRead, file.length - bytesRead);
+                            if (result == -1) break;
+                            bytesRead += result;
+                        }
                     }
 
                     // 2. chunk -> hash -> recipe (& buffer)
