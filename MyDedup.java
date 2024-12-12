@@ -2,6 +2,7 @@ import java.io.*;
 import java.util.*;
 import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.text.DecimalFormat;
 
 public class MyDedup {
 
@@ -383,6 +384,7 @@ public class MyDedup {
     }
 
     private static void reportStat(MyDedupIndex myDedupIndex) {
+        DecimalFormat df = new DecimalFormat("#.00");
         System.out.println();
         System.out.println("Report Output:");
         System.out.println("Total number of files that have been stored: " + myDedupIndex.stat.noOfFilesStored);
@@ -391,7 +393,7 @@ public class MyDedup {
         System.out.println("Total number of bytes of pre-deduplicated chunks in storage: " + myDedupIndex.stat.noOfBytesOfPreDedupChunks);
         System.out.println("Total number of bytes of unique chunks in storage: " + myDedupIndex.stat.noOfBytesOfUniqueChunks);
         System.out.println("Total number of containers in storage: " + myDedupIndex.stat.noOfContainers);
-        System.out.println("Deduplication ratio: " + myDedupIndex.stat.getDedupRatio());
+        System.out.println("Deduplication ratio: " + df.format(myDedupIndex.stat.getDedupRatio()));
     }
 
 }
