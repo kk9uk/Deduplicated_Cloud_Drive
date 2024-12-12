@@ -1,6 +1,7 @@
 import java.io.*;
 import java.util.*;
 import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
 
@@ -385,6 +386,7 @@ public class MyDedup {
 
     private static void reportStat(MyDedupIndex myDedupIndex) {
         DecimalFormat df = new DecimalFormat("#.00");
+        df.setRoundingMode(RoundingMode.HALF_UP);
         System.out.println();
         System.out.println("Report Output:");
         System.out.println("Total number of files that have been stored: " + myDedupIndex.stat.noOfFilesStored);
