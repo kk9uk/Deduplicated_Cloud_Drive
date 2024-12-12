@@ -1,9 +1,7 @@
 import java.io.*;
 import java.util.*;
 import java.math.BigInteger;
-import java.math.RoundingMode;
 import java.security.MessageDigest;
-import java.text.DecimalFormat;
 
 public class MyDedup {
 
@@ -188,38 +186,38 @@ public class MyDedup {
                         System.out.println("[USAGE]: java MyDedup download <file_to_download> <new_file_name>");
                         System.exit(1);
                     }
-                
+
                     if (!myDedupIndex.recipe.containsKey(args[1])) {
                         System.out.println("[ERROR]: \"" + args[1] + "\" does not exist");
                         System.exit(1);
                     }
-                
+
                     // 2. read chunks
 
                     List<MyDedupIndex.RecipeContent> chunkList = myDedupIndex.recipe.get(args[1]);
-                
+
                     ByteArrayOutputStream data = new ByteArrayOutputStream();
 
                     // 3. loop for read and write
-                
+
                     for (MyDedupIndex.RecipeContent currentChunk : chunkList) {
                         File containerFile = new File("data/" + currentChunk.id);
                         if (!containerFile.exists()) {
                             System.out.println("[ERROR]: Missing container file: " + currentChunk.id);
                             System.exit(1);
                         }
-                
+
                         try (FileInputStream fileInputContainer = new FileInputStream(containerFile)) {
                             fileInputContainer.skip(currentChunk.offset);
                             byte[] containerData = new byte[currentChunk.size];
-                
+
                             int bytesRead = 0;
                             while (bytesRead < containerData.length) {
                                 int result = fileInputContainer.read(containerData, bytesRead, containerData.length - bytesRead);
                                 if (result == -1) break;
                                 bytesRead += result;
                             }
-                
+
                             data.write(containerData);
                         } catch (IOException e) {
                             System.err.println("[ERROR]: Failed to read chunk from container " + currentChunk.id);
@@ -227,14 +225,14 @@ public class MyDedup {
                             System.exit(1);
                         }
                     }
-                
+
                     if (data.size() == 0) {
                         System.out.println("[ERROR]: No data to write. Data size == 0.");
                         System.exit(1);
                     }
 
                     // 4. create local output file
-                
+
                     File fileOut = new File(args[2]);
                     if (fileOut.getParentFile() != null) {
                         fileOut.getParentFile().mkdirs();
@@ -249,7 +247,7 @@ public class MyDedup {
                         e.printStackTrace();
                         System.exit(1);
                     }
-                
+
                     try (FileOutputStream outputFile = new FileOutputStream(fileOut)) {
                         data.writeTo(outputFile);
                         System.out.println("Downloaded: " + args[2]);
@@ -276,7 +274,7 @@ public class MyDedup {
 
                     try {
                         List<MyDedupIndex.RecipeContent> fileRecipe = myDedupIndex.recipe.get(filePath); // Retrieve
-                        
+
                         myDedupIndex.recipe.remove(filePath); // Remove
                         // Stat Modify (stored files no.)
                         myDedupIndex.stat.noOfFilesStored--;
@@ -312,10 +310,10 @@ public class MyDedup {
                                         File containerFile = new File(storagePath);
                                         if (containerFile.exists()) {
                                             containerFile.delete();
-                                        } 
+                                        }
                                     }
                                 }
-                                
+
                             }
 
                             // Stat Modify (PreDedupChunks and Bytes)
@@ -385,8 +383,6 @@ public class MyDedup {
     }
 
     private static void reportStat(MyDedupIndex myDedupIndex) {
-        DecimalFormat df = new DecimalFormat("#.00");
-        df.setRoundingMode(RoundingMode.HALF_UP);
         System.out.println();
         System.out.println("Report Output:");
         System.out.println("Total number of files that have been stored: " + myDedupIndex.stat.noOfFilesStored);
@@ -395,7 +391,7 @@ public class MyDedup {
         System.out.println("Total number of bytes of pre-deduplicated chunks in storage: " + myDedupIndex.stat.noOfBytesOfPreDedupChunks);
         System.out.println("Total number of bytes of unique chunks in storage: " + myDedupIndex.stat.noOfBytesOfUniqueChunks);
         System.out.println("Total number of containers in storage: " + myDedupIndex.stat.noOfContainers);
-        System.out.println("Deduplication ratio: " + df.format(myDedupIndex.stat.getDedupRatio()));
+        System.out.println("Deduplication ratio: " + String.format("%.2f", myDedupIndex.stat.getDedupRatio()));
     }
 
 }
