@@ -54,10 +54,14 @@ public class MyDedup {
                     boolean hasNextByte = true;
                     int chunkStart = 0, chunkEnd;
                     long prevRfp = 0;
+
                     // precompute d^0..minChunk-1 mod avgChunk
                     int[] dToPowIndexModQ = new int[minChunk];
-                    for (int i = 0; i < minChunk; ++i) {
-                        dToPowIndexModQ[i] = modularPow(257, i, avgChunk);
+                    if (avgChunk != 1) {
+                        dToPowIndexModQ[0] = 1;
+                        for (int i = 1; i < minChunk; ++i) {
+                            dToPowIndexModQ[i] = (dToPowIndexModQ[i - 1] * 257) % avgChunk;
+                        }
                     }
 
                     MessageDigest messageDigest = MessageDigest.getInstance("MD5");
