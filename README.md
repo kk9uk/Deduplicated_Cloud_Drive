@@ -1,12 +1,12 @@
 ## Usage
-> - Upload
+- Upload
 
-    java DeduplicatedCloudDrive upload <min_chunk> <avg_chunk> <max_chunk> <file_to_upload>
+      java DeduplicatedCloudDrive upload <min_chunk> <avg_chunk> <max_chunk> <file_to_upload>
 
-> - Download
+- Download
 
-    java DeduplicatedCloudDrive download <file_to_download> <target_path>
+      java DeduplicatedCloudDrive download <file_to_download> <target_path>
 
-> - Delete
+- Delete
 
-    java DeduplicatedCloudDrive delete <file_to_delete>
+      java DeduplicatedCloudDrive delete <file_to_delete>
