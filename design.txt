@@ -1,0 +1,17 @@
+Metadata:
+1. Recipe: ConcurrentHashMap<path, UnmodifiableList<(hash, id, offset, size)>>
+'-> 2. Index: ConcurrentHashMap<hash, (id, offset, size, ref_count)>
+    '-> 3. Container_Ref_Count: ConcurrentHashMap<id, container_ref_count>
+
+Upload:
+1. chunk
+2. hash -> check index -> write buffer -> form recipe
+
+Download:
+1. get recipe
+2. cook
+
+Delete:
+1. remove recipe
+2. delete index if ref_count == 0
+3. clean container if container_ref_count == 0

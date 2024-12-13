@@ -3,13 +3,13 @@ import java.util.*;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 
-public class MyDedup {
+public class DeduplicatedCloudDrive {
 
     public static void main(String[] args) {
         try {
 
             // 0. load metadata file
-            MyDedupIndex myDedupIndex = loadMetadata();
+            DataIndex dataIndex = loadMetadata();
 
             switch (args[0]) {
 
@@ -17,21 +17,15 @@ public class MyDedup {
 
                     // 1. read args & file
                     if (args.length != 5) {
-                        System.out.println("[USAGE]: java MyDedup upload <min_chunk> <avg_chunk> <max_chunk> <file_to_upload>");
-                        System.exit(1);
-                    } else if (!isInteger(logN(Integer.parseInt(args[1]), 2))) {
-                        System.out.println("[ERROR]: min_chunk has to be power of 2!");
+                        System.out.println("[USAGE]: java DeduplicatedCloudDrive upload <min_chunk> <avg_chunk> <max_chunk> <file_to_upload>");
                         System.exit(1);
                     } else if (!isInteger(logN(Integer.parseInt(args[2]), 2))) {
                         System.out.println("[ERROR]: avg_chunk has to be power of 2!");
                         System.exit(1);
-                    } else if (!isInteger(logN(Integer.parseInt(args[3]), 2))) {
-                        System.out.println("[ERROR]: max_chunk has to be power of 2!");
-                        System.exit(1);
                     } else if (!new File(args[4]).exists()) {
                         System.out.println("[ERROR]: " + args[4] + " does not exist!");
                         System.exit(1);
-                    } else if (myDedupIndex.recipe.containsKey(args[4])) {
+                    } else if (dataIndex.recipe.containsKey(args[4])) {
                         System.out.println("[ERROR]: " + args[4] + " already uploaded!");
                         System.exit(1);
                     }
@@ -55,7 +49,7 @@ public class MyDedup {
                     int chunkStart = 0, chunkEnd;
                     long prevRfp = 0;
 
-                    // precompute d^0..minChunk-1 mod avgChunk
+                    // precompute d^0..minChunk-1 mod avgChunk (modular exponentiation)
                     int[] dToPowIndexModQ = new int[minChunk];
                     if (avgChunk != 1) {
                         dToPowIndexModQ[0] = 1;
@@ -64,8 +58,8 @@ public class MyDedup {
                         }
                     }
 
-                    MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-                    List<MyDedupIndex.RecipeContent> recipeContents = new ArrayList<>();
+                    MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+                    List<DataIndex.RecipeContent> recipeContents = new ArrayList<>();
                     ByteArrayOutputStream buffer = new ByteArrayOutputStream(1 * 1024 * 1024);
                     long noOfChunksInBuffer = 0;
 
@@ -106,15 +100,15 @@ public class MyDedup {
 
                         }
                         byte[] chunk = Arrays.copyOfRange(file, chunkStart, chunkEnd + 1);
-                        ++myDedupIndex.stat.noOfPreDedupChunks;
-                        myDedupIndex.stat.noOfBytesOfPreDedupChunks += chunk.length;
+                        ++dataIndex.stat.noOfPreDedupChunks;
+                        dataIndex.stat.noOfBytesOfPreDedupChunks += chunk.length;
 
                         // hash
                         String hash = new BigInteger(1, messageDigest.digest(chunk)).toString(16);
                         messageDigest.reset();
-                        if (myDedupIndex.index.containsKey(hash)) {
-                            MyDedupIndex.IndexValue indexValue = myDedupIndex.index.get(hash);
-                            recipeContents.add(new MyDedupIndex.RecipeContent(
+                        if (dataIndex.index.containsKey(hash)) {
+                            DataIndex.IndexValue indexValue = dataIndex.index.get(hash);
+                            recipeContents.add(new DataIndex.RecipeContent(
                                     hash,
                                     indexValue.id,
                                     indexValue.offset,
@@ -124,26 +118,26 @@ public class MyDedup {
                         } else {
 
                             if (buffer.size() + chunk.length > 1 * 1024 * 1024) {
-                                try (FileOutputStream fileOutputStream = new FileOutputStream("./data/" + myDedupIndex.nextContainerId)) {
+                                try (FileOutputStream fileOutputStream = new FileOutputStream("./data/" + dataIndex.nextContainerId)) {
                                     buffer.writeTo(fileOutputStream);
-                                    myDedupIndex.containerRefCount.put(myDedupIndex.nextContainerId, noOfChunksInBuffer);
-                                    ++myDedupIndex.stat.noOfContainers;
-                                    ++myDedupIndex.nextContainerId;
+                                    dataIndex.containerRefCount.put(dataIndex.nextContainerId, noOfChunksInBuffer);
+                                    ++dataIndex.stat.noOfContainers;
+                                    ++dataIndex.nextContainerId;
                                     buffer.reset();
                                     noOfChunksInBuffer = 0;
                                 }
                             }
 
-                            recipeContents.add(new MyDedupIndex.RecipeContent(
+                            recipeContents.add(new DataIndex.RecipeContent(
                                     hash,
-                                    myDedupIndex.nextContainerId,
+                                    dataIndex.nextContainerId,
                                     buffer.size(),
                                     chunk.length
                             ));
-                            myDedupIndex.index.put(
+                            dataIndex.index.put(
                                     hash,
-                                    new MyDedupIndex.IndexValue(
-                                            myDedupIndex.nextContainerId,
+                                    new DataIndex.IndexValue(
+                                            dataIndex.nextContainerId,
                                             buffer.size(),
                                             chunk.length,
                                             1
@@ -151,17 +145,17 @@ public class MyDedup {
                             );
                             buffer.write(chunk);
                             ++noOfChunksInBuffer;
-                            ++myDedupIndex.stat.noOfUniqueChunks;
-                            myDedupIndex.stat.noOfBytesOfUniqueChunks += chunk.length;
+                            ++dataIndex.stat.noOfUniqueChunks;
+                            dataIndex.stat.noOfBytesOfUniqueChunks += chunk.length;
 
                         }
 
                         if (!hasNextByte && buffer.size() != 0) {
-                            try (FileOutputStream fileOutputStream = new FileOutputStream("./data/" + myDedupIndex.nextContainerId)) {
+                            try (FileOutputStream fileOutputStream = new FileOutputStream("./data/" + dataIndex.nextContainerId)) {
                                 buffer.writeTo(fileOutputStream);
-                                myDedupIndex.containerRefCount.put(myDedupIndex.nextContainerId, noOfChunksInBuffer);
-                                ++myDedupIndex.stat.noOfContainers;
-                                ++myDedupIndex.nextContainerId;
+                                dataIndex.containerRefCount.put(dataIndex.nextContainerId, noOfChunksInBuffer);
+                                ++dataIndex.stat.noOfContainers;
+                                ++dataIndex.nextContainerId;
                                 buffer.reset();
                                 noOfChunksInBuffer = 0;
                             }
@@ -171,10 +165,10 @@ public class MyDedup {
 
                     }
 
-                    myDedupIndex.recipe.put(args[4], recipeContents);
-                    ++myDedupIndex.stat.noOfFilesStored;
+                    dataIndex.recipe.put(args[4], recipeContents);
+                    ++dataIndex.stat.noOfFilesStored;
 
-                    reportStat(myDedupIndex);
+                    reportStat(dataIndex);
 
                     break;
 
@@ -183,24 +177,24 @@ public class MyDedup {
                     // 1. read args
 
                     if (args.length != 3) {
-                        System.out.println("[USAGE]: java MyDedup download <file_to_download> <new_file_name>");
+                        System.out.println("[USAGE]: java DeduplicatedCloudDrive download <file_to_download> <new_file_name>");
                         System.exit(1);
                     }
 
-                    if (!myDedupIndex.recipe.containsKey(args[1])) {
+                    if (!dataIndex.recipe.containsKey(args[1])) {
                         System.out.println("[ERROR]: \"" + args[1] + "\" does not exist");
                         System.exit(1);
                     }
 
                     // 2. read chunks
 
-                    List<MyDedupIndex.RecipeContent> chunkList = myDedupIndex.recipe.get(args[1]);
+                    List<DataIndex.RecipeContent> chunkList = dataIndex.recipe.get(args[1]);
 
                     ByteArrayOutputStream data = new ByteArrayOutputStream();
 
                     // 3. loop for read and write
 
-                    for (MyDedupIndex.RecipeContent currentChunk : chunkList) {
+                    for (DataIndex.RecipeContent currentChunk : chunkList) {
                         File containerFile = new File("data/" + currentChunk.id);
                         if (!containerFile.exists()) {
                             System.out.println("[ERROR]: Missing container file: " + currentChunk.id);
@@ -262,9 +256,9 @@ public class MyDedup {
 
                     // 1. read args
                     if (args.length != 2) {
-                        System.out.println("[USAGE]: java MyDedup delete <pathname>");
+                        System.out.println("[USAGE]: java DeduplicatedCloudDrive delete <pathname>");
                         System.exit(1);
-                    } else if (!myDedupIndex.recipe.containsKey(args[1])) {
+                    } else if (!dataIndex.recipe.containsKey(args[1])) {
                         System.out.println("[ERROR]: file " + args[1] + " does not exist!");
                         System.exit(1);
                     }
@@ -273,37 +267,37 @@ public class MyDedup {
                     String filePath = args[1];
 
                     try {
-                        List<MyDedupIndex.RecipeContent> fileRecipe = myDedupIndex.recipe.get(filePath); // Retrieve
+                        List<DataIndex.RecipeContent> fileRecipe = dataIndex.recipe.get(filePath); // Retrieve
 
-                        myDedupIndex.recipe.remove(filePath); // Remove
+                        dataIndex.recipe.remove(filePath); // Remove
                         // Stat Modify (stored files no.)
-                        myDedupIndex.stat.noOfFilesStored--;
+                        dataIndex.stat.noOfFilesStored--;
 
                         // 3. get chunk ref count -1 & check ref count == 0 -> delete index
-                        for (MyDedupIndex.RecipeContent chunk : fileRecipe) {
+                        for (DataIndex.RecipeContent chunk : fileRecipe) {
                             String chunkHash = chunk.hash;
 
-                            MyDedupIndex.IndexValue chunkIndex = myDedupIndex.index.get(chunkHash); // Get index entry
+                            DataIndex.IndexValue chunkIndex = dataIndex.index.get(chunkHash); // Get index entry
 
                             if (chunkIndex != null) {
                                 chunkIndex.refCount--; // Chunk refCount -1
 
                                 if (chunkIndex.refCount == 0) {
-                                    myDedupIndex.index.remove(chunkHash); // Remove chunk with no ref
+                                    dataIndex.index.remove(chunkHash); // Remove chunk with no ref
 
                                     // Stat Modify (unique chunks and bytes)
-                                    myDedupIndex.stat.noOfUniqueChunks--;
-                                    myDedupIndex.stat.noOfBytesOfUniqueChunks -= chunkIndex.size;
+                                    dataIndex.stat.noOfUniqueChunks--;
+                                    dataIndex.stat.noOfBytesOfUniqueChunks -= chunkIndex.size;
 
                                     // 4. update container ref count & check ref count == 0 -> delete physically
                                     int containerId = chunkIndex.id;
-                                    myDedupIndex.containerRefCount.put(containerId, myDedupIndex.containerRefCount.get(containerId) - 1); // Container refCount -1
+                                    dataIndex.containerRefCount.put(containerId, dataIndex.containerRefCount.get(containerId) - 1); // Container refCount -1
 
                                     // Remove container if refCount == 0
-                                    if (myDedupIndex.containerRefCount.get(containerId) == 0) {
-                                        myDedupIndex.containerRefCount.remove(containerId);
+                                    if (dataIndex.containerRefCount.get(containerId) == 0) {
+                                        dataIndex.containerRefCount.remove(containerId);
                                         // Stat Modify (containers no.)
-                                        myDedupIndex.stat.noOfContainers--;
+                                        dataIndex.stat.noOfContainers--;
 
                                         // Delete container physically
                                         String storagePath = "./data/" + containerId;
@@ -317,8 +311,8 @@ public class MyDedup {
                             }
 
                             // Stat Modify (PreDedupChunks and Bytes)
-                            myDedupIndex.stat.noOfPreDedupChunks--;
-                            myDedupIndex.stat.noOfBytesOfPreDedupChunks -= chunk.size;
+                            dataIndex.stat.noOfPreDedupChunks--;
+                            dataIndex.stat.noOfBytesOfPreDedupChunks -= chunk.size;
 
                         }
 
@@ -337,7 +331,7 @@ public class MyDedup {
             }
 
             // 0. save metadata file
-            saveMetadata(myDedupIndex);
+            saveMetadata(dataIndex);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -353,45 +347,32 @@ public class MyDedup {
         return !Double.isNaN(a) && !Double.isInfinite(a) && (int) a == a;
     }
 
-    private static MyDedupIndex loadMetadata() throws IOException, ClassNotFoundException {
-        if (!new File("./mydedup.index").exists()) {
-            return new MyDedupIndex();
+    private static DataIndex loadMetadata() throws IOException, ClassNotFoundException {
+        if (!new File("./data.index").exists()) {
+            return new DataIndex();
         }
 
-        try (FileInputStream fileInputStream = new FileInputStream("./mydedup.index"); ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
-            return (MyDedupIndex) objectInputStream.readObject();
-        }
-    }
-
-    private static void saveMetadata(MyDedupIndex myDedupIndex) throws IOException {
-        try (FileOutputStream fileOutputStream = new FileOutputStream("./mydedup.index"); ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
-            objectOutputStream.writeObject(myDedupIndex);
+        try (FileInputStream fileInputStream = new FileInputStream("./data.index"); ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
+            return (DataIndex) objectInputStream.readObject();
         }
     }
 
-    // b^2 mod m = (b * b) mod m = (b mod m * b mod m) mod m
-    private static int modularPow(int base, int exponent, int modulo) {
-        if (modulo == 1) {
-            return 0;
+    private static void saveMetadata(DataIndex dataIndex) throws IOException {
+        try (FileOutputStream fileOutputStream = new FileOutputStream("./data.index"); ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
+            objectOutputStream.writeObject(dataIndex);
         }
-
-        int result = 1;
-        for (int e = 0; e < exponent; ++e) {
-            result = (result * base) % modulo;
-        }
-        return result;
     }
 
-    private static void reportStat(MyDedupIndex myDedupIndex) {
+    private static void reportStat(DataIndex dataIndex) {
         System.out.println();
         System.out.println("Report Output:");
-        System.out.println("Total number of files that have been stored: " + myDedupIndex.stat.noOfFilesStored);
-        System.out.println("Total number of pre-deduplicated chunks in storage: " + myDedupIndex.stat.noOfPreDedupChunks);
-        System.out.println("Total number of unique chunks in storage: " + myDedupIndex.stat.noOfUniqueChunks);
-        System.out.println("Total number of bytes of pre-deduplicated chunks in storage: " + myDedupIndex.stat.noOfBytesOfPreDedupChunks);
-        System.out.println("Total number of bytes of unique chunks in storage: " + myDedupIndex.stat.noOfBytesOfUniqueChunks);
-        System.out.println("Total number of containers in storage: " + myDedupIndex.stat.noOfContainers);
-        System.out.println("Deduplication ratio: " + String.format("%.2f", myDedupIndex.stat.getDedupRatio()));
+        System.out.println("Total number of files that have been stored: " + dataIndex.stat.noOfFilesStored);
+        System.out.println("Total number of pre-deduplicated chunks in storage: " + dataIndex.stat.noOfPreDedupChunks);
+        System.out.println("Total number of unique chunks in storage: " + dataIndex.stat.noOfUniqueChunks);
+        System.out.println("Total number of bytes of pre-deduplicated chunks in storage: " + dataIndex.stat.noOfBytesOfPreDedupChunks);
+        System.out.println("Total number of bytes of unique chunks in storage: " + dataIndex.stat.noOfBytesOfUniqueChunks);
+        System.out.println("Total number of containers in storage: " + dataIndex.stat.noOfContainers);
+        System.out.println("Deduplication ratio: " + String.format("%.2f", dataIndex.stat.getDedupRatio()));
     }
 
 }

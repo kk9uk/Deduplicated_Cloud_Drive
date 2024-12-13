@@ -5,4 +5,4 @@ all:
 	mkdir -p ./data
 
 clean:
-	rm -f ./mydedup.index ./data/*
+	rm -f ./data.index ./data/*
