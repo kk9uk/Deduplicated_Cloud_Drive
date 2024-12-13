@@ -177,7 +177,7 @@ public class DeduplicatedCloudDrive {
                     // 1. read args
 
                     if (args.length != 3) {
-                        System.out.println("[USAGE]: java DeduplicatedCloudDrive download <file_to_download> <new_file_name>");
+                        System.out.println("[USAGE]: java DeduplicatedCloudDrive download <file_to_download> <target_path>");
                         System.exit(1);
                     }
 
@@ -256,7 +256,7 @@ public class DeduplicatedCloudDrive {
 
                     // 1. read args
                     if (args.length != 2) {
-                        System.out.println("[USAGE]: java DeduplicatedCloudDrive delete <pathname>");
+                        System.out.println("[USAGE]: java DeduplicatedCloudDrive delete <file_to_delete>");
                         System.exit(1);
                     } else if (!dataIndex.recipe.containsKey(args[1])) {
                         System.out.println("[ERROR]: file " + args[1] + " does not exist!");
